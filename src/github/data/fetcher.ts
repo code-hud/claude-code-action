@@ -227,6 +227,10 @@ export async function fetchUserDisplayName(
     });
     return result.user.name;
   } catch (error) {
+    // If it's a bot, use the login name, otherwise return null and log warning
+    if (login.endsWith('[bot]')) {
+      return login;
+    }
     console.warn(`Failed to fetch user display name for ${login}:`, error);
     return null;
   }

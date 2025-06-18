@@ -8,7 +8,7 @@
 import * as core from "@actions/core";
 import { setupGitHubToken } from "../github/token";
 import { checkTriggerAction } from "../github/validation/trigger";
-import { checkHumanActor } from "../github/validation/actor";
+import { checkAllowedActor } from "../github/validation/actor";
 import { checkWritePermissions } from "../github/validation/permissions";
 import { createInitialComment } from "../github/operations/comments/create-initial";
 import { setupBranch } from "../github/operations/branch";
@@ -48,7 +48,7 @@ async function run() {
     }
 
     // Step 5: Check if actor is human
-    await checkHumanActor(octokit.rest, context);
+    await checkAllowedActor(octokit.rest, context);
 
     // Step 6: Create initial tracking comment
     const commentId = await createInitialComment(octokit.rest, context);

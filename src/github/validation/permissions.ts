@@ -3,21 +3,27 @@ import type { ParsedGitHubContext } from "../context";
 import type { Octokit } from "@octokit/rest";
 
 /**
- * Check if the actor has write permissions to the repository
+ * Check if the actor has write permissions to the repository or is an allowed bot
  * @param octokit - The Octokit REST client
  * @param context - The GitHub context
- * @returns true if the actor has write permissions, false otherwise
+ * @returns true if the actor has write permissions or is an allowed bot, false otherwise
  */
 export async function checkWritePermissions(
   octokit: Octokit,
   context: ParsedGitHubContext,
 ): Promise<boolean> {
-  const { repository, actor } = context;
+  const { repository, actor, inputs } = context;
 
   try {
     core.info(`Checking permissions for actor: ${actor}`);
 
-    // Check permissions directly using the permission endpoint
+    // First check if this is an allowed bot
+    if (inputs.allowedBotNames.includes(actor)) {
+      core.info(`Actor is an allowed bot: ${actor}`);
+      return true;
+    }
+
+    // Check permissions directly using the permission endpoint for human users
     const response = await octokit.repos.getCollaboratorPermissionLevel({
       owner: repository.owner,
       repo: repository.repo,

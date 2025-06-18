@@ -12,6 +12,26 @@ The `github-actions` user cannot trigger subsequent GitHub Actions workflows. Th
 
 Only users with **write permissions** to the repository can trigger Claude. This is a security feature to prevent unauthorized use. Make sure the user commenting has at least write access to the repository.
 
+### Can bots trigger Claude?
+
+By default, bots and GitHub Apps cannot trigger Claude for security reasons. However, you can explicitly allow specific trusted bots using the `allowed_bot_names` parameter:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    allowed_bot_names: "dependabot[bot],renovate[bot]"
+    # ... other inputs
+```
+
+This is useful for automation scenarios where you want dependency update bots to trigger Claude for code reviews.
+
+**Important:** Use the exact GitHub login names:
+- `dependabot[bot]` (includes `[bot]` suffix)
+- `renovate[bot]` (includes `[bot]` suffix)  
+- `github-actions[bot]` (includes `[bot]` suffix)
+
+You can verify bot usernames by checking their GitHub profiles or PR commit authors.
+
 ### Why am I getting OIDC authentication errors?
 
 If you're using the default GitHub App authentication, you must add the `id-token: write` permission to your workflow:
