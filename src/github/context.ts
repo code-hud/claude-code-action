@@ -29,6 +29,7 @@ export type ParsedGitHubContext = {
   inputs: {
     triggerPhrase: string;
     assigneeTrigger: string;
+    allowedBotNames: string[];
     allowedTools: string[];
     disallowedTools: string[];
     customInstructions: string;
@@ -53,6 +54,7 @@ export function parseGitHubContext(): ParsedGitHubContext {
     inputs: {
       triggerPhrase: process.env.TRIGGER_PHRASE ?? "@claude",
       assigneeTrigger: process.env.ASSIGNEE_TRIGGER ?? "",
+      allowedBotNames: parseMultilineInput(process.env.ALLOWED_BOT_NAMES ?? ""),
       allowedTools: parseMultilineInput(process.env.ALLOWED_TOOLS ?? ""),
       disallowedTools: parseMultilineInput(process.env.DISALLOWED_TOOLS ?? ""),
       customInstructions: process.env.CUSTOM_INSTRUCTIONS ?? "",

@@ -62,6 +62,7 @@ describe("checkWritePermissions", () => {
     inputs: {
       triggerPhrase: "@claude",
       assigneeTrigger: "",
+      allowedBotNames: [],
       allowedTools: [],
       disallowedTools: [],
       customInstructions: "",
@@ -158,5 +159,53 @@ describe("checkWritePermissions", () => {
       repo: "test-repo",
       username: "test-user",
     });
+  });
+
+  test("should return true for allowed bots without checking API", async () => {
+    const mockOctokit = {
+      repos: {
+        getCollaboratorPermissionLevel: async () => {
+          throw new Error("Should not call API for allowed bots");
+        },
+      },
+    } as any;
+    const context = createContext();
+    context.actor = "dependabot[bot]";
+    context.inputs.allowedBotNames = ["dependabot[bot]", "renovate[bot]"];
+
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+    expect(coreInfoSpy).toHaveBeenCalledWith(
+      "Checking permissions for actor: dependabot[bot]",
+    );
+    expect(coreInfoSpy).toHaveBeenCalledWith(
+      "Actor is an allowed bot: dependabot[bot]",
+    );
+  });
+
+  test("should check API permissions for non-allowed bots", async () => {
+    const mockOctokit = createMockOctokit("read");
+    const context = createContext();
+    context.actor = "unknown-bot";
+    context.inputs.allowedBotNames = ["dependabot[bot]", "renovate[bot]"];
+
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(false);
+    expect(coreWarningSpy).toHaveBeenCalledWith(
+      "Actor has insufficient permissions: read",
+    );
+  });
+
+  test("should check API permissions for human users even with bot whitelist", async () => {
+    const mockOctokit = createMockOctokit("write");
+    const context = createContext();
+    context.inputs.allowedBotNames = ["dependabot[bot]", "renovate[bot]"];
+
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+    expect(coreInfoSpy).toHaveBeenCalledWith("Actor has write access: write");
   });
 });

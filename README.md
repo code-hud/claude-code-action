@@ -92,6 +92,7 @@ jobs:
 | `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
 | `mcp_config`          | Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers                          | No       | ""        |
 | `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
+| `allowed_bot_names`   | Comma-separated list of bot names that are allowed to trigger this action (in addition to human users)               | No       | ""        |
 | `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
 | `claude_env`          | Custom environment variables to pass to Claude Code execution (YAML format)                                          | No       | ""        |
 
@@ -395,6 +396,31 @@ Claude does **not** have access to execute arbitrary Bash commands by default. I
 
 **Note**: The base GitHub tools are always included. Use `allowed_tools` to add additional tools (including specific Bash commands), and `disallowed_tools` to prevent specific tools from being used.
 
+### Bot Whitelist
+
+By default, only human users with write access can trigger Claude. However, you can allow specific bots to trigger Claude using the `allowed_bot_names` parameter. This is useful for automation scenarios where you want trusted bots (like Dependabot or Renovate) to trigger Claude for code reviews or updates.
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    # Allow specific bots to trigger Claude
+    allowed_bot_names: |
+      dependabot[bot]
+      renovate[bot]
+      github-actions[bot]
+    # ... other inputs
+```
+
+**Security Considerations:**
+
+- Bot names are case-sensitive - ensure exact matching with GitHub login names
+- Only add bots you trust to your whitelist
+- Empty list (default) means no bots are allowed
+- Human users are always allowed (if they have write access)
+
+**Important:** Bot usernames must match their exact GitHub login names. The format varies - some bots include `[bot]` suffix and some don't. You can verify the exact username by checking the bot's GitHub profile or examining PR history to see the actual `login` field from the GitHub API.
+
 ### Custom Model
 
 Use a specific Claude model:
@@ -507,7 +533,7 @@ Both AWS Bedrock and GCP Vertex AI require OIDC authentication.
 ### Access Control
 
 - **Repository Access**: The action can only be triggered by users with write access to the repository
-- **No Bot Triggers**: GitHub Apps and bots cannot trigger this action
+- **Bot Access Control**: By default, GitHub Apps and bots cannot trigger this action. However, you can explicitly allow specific bots using the `allowed_bot_names` parameter (e.g., `dependabot`, `renovate[bot]`)
 - **Token Permissions**: The GitHub app receives only a short-lived token scoped specifically to the repository it's operating in
 - **No Cross-Repository Access**: Each action invocation is limited to the repository where it was triggered
 - **Limited Scope**: The token cannot access other repositories or perform actions beyond the configured permissions
