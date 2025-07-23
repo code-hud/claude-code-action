@@ -1,0 +1,124 @@
+name: Multi-AI Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  # Job for Claude AI Assistant
+  claude-assistant:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude AI
+        uses: anthropics/claude-code-action@beta
+        with:
+          cli_tool: "claude-cli"
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          trigger_phrase: "@claude"
+          model: "claude-3-5-sonnet-20241022"
+          timeout_minutes: "60"
+
+  # Job for Gemini AI Assistant
+  gemini-assistant:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gemini')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@gemini'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Gemini AI
+        uses: anthropics/claude-code-action@beta
+        with:
+          cli_tool: "gemini-cli"
+          api_key: ${{ secrets.GOOGLE_API_KEY }}
+          trigger_phrase: "@gemini"
+          model: "gemini-pro"
+          timeout_minutes: "45"
+
+  # Job for Codex AI Assistant
+  codex-assistant:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@codex')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@codex'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Codex AI
+        uses: anthropics/claude-code-action@beta
+        with:
+          cli_tool: "codex-cli"
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          trigger_phrase: "@codex"
+          model: "gpt-4"
+          timeout_minutes: "30"
+
+  # Job for Augment AI Assistant
+  augment-assistant:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@augment')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@augment'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Augment AI
+        uses: anthropics/claude-code-action@beta
+        with:
+          cli_tool: "augment-cli"
+          api_key: ${{ secrets.AUGMENT_API_KEY }}
+          trigger_phrase: "@augment"
+          model: "augment-latest"
+          timeout_minutes: "40" 

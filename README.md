@@ -1,37 +1,62 @@
 ![Claude Code Action responding to a comment](https://github.com/user-attachments/assets/1d60c2e9-82ed-4ee5-b749-f9e021c85f4d)
 
-# Claude Code Action
+# AI Code Action
 
-A general-purpose [Claude Code](https://claude.ai/code) action for GitHub PRs and issues that can answer questions and implement code changes. This action listens for a trigger phrase in comments and activates Claude act on the request. It supports multiple authentication methods including Anthropic direct API, Amazon Bedrock, and Google Vertex AI.
+A general-purpose AI action for GitHub PRs and issues that can answer questions and implement code changes using various CLI tools. This action listens for a trigger phrase in comments and activates your chosen AI tool to act on the request. It supports multiple CLI tools including Claude, Gemini, Codex, and Augment.
 
 ## Features
 
-- 🤖 **Interactive Code Assistant**: Claude can answer questions about code, architecture, and programming
+- 🤖 **Multi-AI Support**: Choose from Claude, Gemini, Codex, or Augment CLI tools for code assistance
 - 🔍 **Code Review**: Analyzes PR changes and suggests improvements
 - ✨ **Code Implementation**: Can implement simple fixes, refactoring, and even new features
 - 💬 **PR/Issue Integration**: Works seamlessly with GitHub comments and PR reviews
 - 🛠️ **Flexible Tool Access**: Access to GitHub APIs and file operations (additional tools can be enabled via configuration)
-- 📋 **Progress Tracking**: Visual progress indicators with checkboxes that dynamically update as Claude completes tasks
-- 🏃 **Runs on Your Infrastructure**: The action executes entirely on your own GitHub runner (Anthropic API calls go to your chosen provider)
+- 📋 **Progress Tracking**: Visual progress indicators with checkboxes that dynamically update as AI completes tasks
+- 🏃 **Runs on Your Infrastructure**: The action executes entirely on your own GitHub runner (API calls go to your chosen provider)
+- 🔄 **Backwards Compatible**: Existing Claude-specific configurations still work with claude-cli
 
 ## Quickstart
 
-The easiest way to set up this action is through [Claude Code](https://claude.ai/code) in the terminal. Just open `claude` and run `/install-github-app`.
+### Choose Your AI Tool
+
+This action supports multiple AI CLI tools:
+
+- **claude-cli**: Powered by Anthropic's Claude (default)
+- **gemini-cli**: Powered by Google's Gemini
+- **codex-cli**: Powered by OpenAI's Codex/GPT models
+- **augment-cli**: Powered by Augment's AI platform
+
+### Quick Setup for Claude (Default)
+
+The easiest way to set up this action with Claude is through [Claude Code](https://claude.ai/code) in the terminal. Just open `claude` and run `/install-github-app`.
 
 This command will guide you through setting up the GitHub app and required secrets.
 
 **Note**:
 
 - You must be a repository admin to install the GitHub app and add secrets
-- This quickstart method is only available for direct Anthropic API users. If you're using AWS Bedrock, please see the instructions below.
+- This quickstart method is only available for Claude with direct Anthropic API users. If you're using AWS Bedrock or other AI tools, please see the manual setup instructions below.
 
-### Manual Setup (Direct API)
+### Manual Setup
 
 **Requirements**: You must be a repository admin to complete these steps.
 
+#### For Claude (claude-cli)
 1. Install the Claude GitHub app to your repository: https://github.com/apps/claude
 2. Add `ANTHROPIC_API_KEY` to your repository secrets ([Learn how to use secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions))
 3. Copy the workflow file from [`examples/claude.yml`](./examples/claude.yml) into your repository's `.github/workflows/`
+
+#### For Gemini (gemini-cli)
+1. Set up GitHub App authentication (same as Claude)
+2. Add `GOOGLE_API_KEY` to your repository secrets
+3. Copy and modify the workflow file from [`examples/gemini-example.yml`](./examples/gemini-example.yml)
+
+#### For Other AI Tools
+1. Set up GitHub App authentication (same as Claude)
+2. Add the appropriate API key secret:
+   - Codex: `OPENAI_API_KEY`
+   - Augment: `AUGMENT_API_KEY`
+3. Copy and modify the workflow file from [`examples/multi-cli-example.yml`](./examples/multi-cli-example.yml)
 
 ## 📚 FAQ
 
@@ -39,10 +64,10 @@ Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md)
 
 ## Usage
 
-Add a workflow file to your repository (e.g., `.github/workflows/claude.yml`):
+Add a workflow file to your repository (e.g., `.github/workflows/ai-assistant.yml`):
 
 ```yaml
-name: Claude Assistant
+name: AI Assistant
 on:
   issue_comment:
     types: [created]
@@ -54,19 +79,28 @@ on:
     types: [submitted]
 
 jobs:
-  claude-response:
+  ai-response:
     runs-on: ubuntu-latest
     steps:
       - uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Choose your AI CLI tool (claude-cli is default)
+          cli_tool: "claude-cli"  # or "gemini-cli", "codex-cli", "augment-cli"
+          
+          # API key for your chosen CLI tool
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}  # or GOOGLE_API_KEY, OPENAI_API_KEY, etc.
+          
+          # GitHub token (usually auto-provided)
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          
           # Optional: add custom trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
+          # trigger_phrase: "/ai"
           # Optional: add assignee trigger for issues
-          # assignee_trigger: "claude"
+          # assignee_trigger: "ai-assistant"
+          # Optional: specify model
+          # model: "claude-3-5-sonnet-20241022"
           # Optional: add custom environment variables (YAML format)
-          # claude_env: |
+          # ai_env: |
           #   NODE_ENV: test
           #   DEBUG: true
           #   API_URL: https://api.example.com
@@ -78,25 +112,28 @@ jobs:
 
 | Input                 | Description                                                                                                          | Required | Default   |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
-| `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
-| `max_turns`           | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
+| `cli_tool`           | CLI tool to use for AI code assistance (claude-cli, gemini-cli, codex-cli, augment-cli)                           | No       | claude-cli |
+| `api_key`            | API key for the selected CLI tool                                                                                   | No*      | -         |
+| `anthropic_api_key`  | **DEPRECATED**: Use `api_key` instead. Anthropic API key (for claude-cli)                                         | No       | -         |
+| `ai_env`             | Custom environment variables to pass to AI execution (YAML format)                                                  | No       | ""        |
+| `claude_env`         | **DEPRECATED**: Use `ai_env` instead. Custom environment variables for Claude Code execution                       | No       | ""        |
+| `direct_prompt`      | Direct prompt for the AI to execute automatically without needing a trigger (for automated workflows)             | No       | -         |
+| `max_turns`           | Maximum number of conversation turns the AI can take (limits back-and-forth exchanges)                              | No       | -         |
 | `timeout_minutes`     | Timeout in minutes for execution                                                                                     | No       | `30`      |
-| `github_token`        | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
-| `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
+| `github_token`        | GitHub token for the AI to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
+| `model`               | Model to use (tool-specific format required)                                                                        | No       | -         |
 | `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -         |
-| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`   |
-| `use_vertex`          | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`   |
-| `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""        |
-| `disallowed_tools`    | Tools that Claude should never use                                                                                   | No       | ""        |
-| `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
+| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication (claude-cli only)                                                       | No       | `false`   |
+| `use_vertex`          | Use Google Vertex AI with OIDC authentication (claude-cli only)                                                     | No       | `false`   |
+| `allowed_tools`       | Additional tools for the AI to use (the base GitHub tools will always be included)                                  | No       | ""        |
+| `disallowed_tools`    | Tools that the AI should never use                                                                                  | No       | ""        |
+| `custom_instructions` | Additional custom instructions to include in the prompt for the AI                                                  | No       | ""        |
 | `mcp_config`          | Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers                          | No       | ""        |
 | `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
 | `allowed_bot_names`   | Comma-separated list of bot names that are allowed to trigger this action (in addition to human users)               | No       | ""        |
 | `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
-| `claude_env`          | Custom environment variables to pass to Claude Code execution (YAML format)                                          | No       | ""        |
 
-\*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
+\*Required when using the appropriate API (e.g., direct Anthropic API for claude-cli)
 
 > **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
 

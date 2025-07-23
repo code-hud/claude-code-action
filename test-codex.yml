@@ -1,0 +1,59 @@
+name: Test Codex AI Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  codex-test:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@codex')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@codex')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@codex'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Test Codex AI Action
+        uses: ./  # Use the local action for testing
+        with:
+          # Use Codex CLI tool
+          cli_tool: "codex-cli"
+          
+          # OpenAI API key for Codex
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          
+          # Custom trigger phrase for Codex
+          trigger_phrase: "@codex"
+          
+          # Optional: Specify GPT model
+          model: "gpt-4"
+          
+          # Timeout for execution
+          timeout_minutes: "30"
+          
+          # Custom instructions for Codex
+          custom_instructions: |
+            You are a helpful AI assistant powered by OpenAI Codex.
+            Focus on providing clean, well-structured code solutions.
+            Always include comments in your code and explain your approach.
+          
+          # Optional: Environment variables
+          ai_env: |
+            OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
+            NODE_ENV: development 

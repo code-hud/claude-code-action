@@ -1,4 +1,4 @@
-name: Claude PR Assistant
+name: AI Assistant
 
 on:
   issue_comment:
@@ -11,7 +11,7 @@ on:
     types: [submitted]
 
 jobs:
-  claude-code-action:
+  ai-code-action:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
@@ -29,8 +29,29 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Run Claude PR Action
+      - name: Run AI Code Action
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Choose your AI CLI tool: claude-cli, gemini-cli, codex-cli, augment-cli
+          cli_tool: "claude-cli"
+          
+          # API key for the selected CLI tool
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Optional: Custom trigger phrase (default: @claude)
+          # trigger_phrase: "/ai"
+          
+          # Optional: Custom timeout
           timeout_minutes: "60"
+          
+          # Optional: Model specification
+          # model: "claude-3-5-sonnet-20241022"
+          
+          # Optional: Additional tools and configuration
+          # allowed_tools: "file_editor,bash_command"
+          # custom_instructions: "Follow best practices and add tests"
+          
+          # Optional: Environment variables for the AI tool
+          # ai_env: |
+          #   NODE_ENV: test
+          #   DEBUG: true

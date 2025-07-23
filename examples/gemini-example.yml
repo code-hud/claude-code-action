@@ -1,0 +1,59 @@
+name: Gemini AI Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  gemini-code-action:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gemini')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@gemini'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Gemini AI Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          # Use Gemini CLI tool
+          cli_tool: "gemini-cli"
+          
+          # Google API key for Gemini
+          api_key: ${{ secrets.GOOGLE_API_KEY }}
+          
+          # Custom trigger phrase for Gemini
+          trigger_phrase: "@gemini"
+          
+          # Optional: Gemini model specification
+          model: "gemini-pro"
+          
+          # Timeout for execution
+          timeout_minutes: "45"
+          
+          # Custom instructions for Gemini
+          custom_instructions: |
+            You are a helpful AI assistant powered by Google Gemini.
+            Focus on providing clear, well-documented code solutions.
+            Always explain your reasoning and suggest improvements.
+          
+          # Optional: Environment variables
+          ai_env: |
+            GEMINI_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+            GEMINI_REGION: us-central1 

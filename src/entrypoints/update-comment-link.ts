@@ -180,13 +180,13 @@ async function run() {
           }
         }
 
-        // Check if the Claude action failed
-        const claudeSuccess = process.env.CLAUDE_SUCCESS !== "false";
-        actionFailed = !claudeSuccess;
+        // Check if the AI action failed
+        const aiSuccess = process.env.AI_SUCCESS !== "false";
+        actionFailed = !aiSuccess;
       } catch (error) {
         console.error("Error reading output file:", error);
         // If we can't read the file, check for any failure markers
-        actionFailed = process.env.CLAUDE_SUCCESS === "false";
+        actionFailed = process.env.AI_SUCCESS === "false";
       }
     }
 

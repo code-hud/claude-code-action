@@ -1,10 +1,14 @@
-name: "Claude Code Action Official"
-description: "General-purpose Claude agent for GitHub PRs and issues. Can answer questions and implement code changes."
+name: "AI Code Action"
+description: "General-purpose AI agent for GitHub PRs and issues. Can answer questions and implement code changes using various CLI tools."
 branding:
-  icon: "at-sign"
-  color: "orange"
+  icon: "code"
+  color: "blue"
 
 inputs:
+  cli_tool:
+    description: "CLI tool to use for AI code assistance (claude-cli, gemini-cli, codex-cli, augment-cli)"
+    required: true
+    default: "claude-cli"
   trigger_phrase:
     description: "The trigger phrase to look for in comments or issue body"
     required: false
@@ -20,49 +24,56 @@ inputs:
     description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
     required: false
 
-  # Claude Code configuration
+  # AI model configuration
   model:
-    description: "Model to use (provider-specific format required for Bedrock/Vertex)"
+    description: "Model to use (tool-specific format required)"
     required: false
   anthropic_model:
-    description: "DEPRECATED: Use 'model' instead. Model to use (provider-specific format required for Bedrock/Vertex)"
+    description: "DEPRECATED: Use 'model' instead. Model to use for Claude (provider-specific format required for Bedrock/Vertex)"
     required: false
   allowed_tools:
-    description: "Additional tools for Claude to use (the base GitHub tools will always be included)"
+    description: "Additional tools for the AI to use (the base GitHub tools will always be included)"
     required: false
     default: ""
   disallowed_tools:
-    description: "Tools that Claude should never use"
+    description: "Tools that the AI should never use"
     required: false
     default: ""
   custom_instructions:
-    description: "Additional custom instructions to include in the prompt for Claude"
+    description: "Additional custom instructions to include in the prompt for the AI"
     required: false
     default: ""
   direct_prompt:
-    description: "Direct instruction for Claude (bypasses normal trigger detection)"
+    description: "Direct instruction for the AI (bypasses normal trigger detection)"
     required: false
     default: ""
   mcp_config:
     description: "Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers"
+  ai_env:
+    description: "Custom environment variables to pass to AI execution (YAML format)"
+    required: false
+    default: ""
   claude_env:
-    description: "Custom environment variables to pass to Claude Code execution (YAML format)"
+    description: "DEPRECATED: Use 'ai_env' instead. Custom environment variables for Claude Code execution"
     required: false
     default: ""
 
   # Auth configuration
+  api_key:
+    description: "API key for the selected CLI tool"
+    required: false
   anthropic_api_key:
-    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
+    description: "DEPRECATED: Use 'api_key' instead. Anthropic API key (required for claude-cli with direct API)"
     required: false
   github_token:
     description: "GitHub token with repo and pull request permissions (optional if using GitHub App)"
     required: false
   use_bedrock:
-    description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
+    description: "Use Amazon Bedrock with OIDC authentication (claude-cli only)"
     required: false
     default: "false"
   use_vertex:
-    description: "Use Google Vertex AI with OIDC authentication instead of direct Anthropic API"
+    description: "Use Google Vertex AI with OIDC authentication (claude-cli only)"
     required: false
     default: "false"
 
@@ -77,8 +88,8 @@ inputs:
 
 outputs:
   execution_file:
-    description: "Path to the Claude Code execution output file"
-    value: ${{ steps.claude-code.outputs.execution_file }}
+    description: "Path to the AI execution output file"
+    value: ${{ steps.ai-execution.outputs.execution_file }}
 
 runs:
   using: "composite"
@@ -112,25 +123,26 @@ runs:
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
 
-    - name: Run Claude Code
-      id: claude-code
+    - name: Run AI CLI Tool
+      id: ai-execution
       if: steps.prepare.outputs.contains_trigger == 'true'
-      uses: anthropics/claude-code-base-action@f382bd1ea00f26043eb461ebabebe0d850572a71 # v0.0.24
-      with:
-        prompt_file: ${{ runner.temp }}/claude-prompts/claude-prompt.txt
-        allowed_tools: ${{ env.ALLOWED_TOOLS }}
-        disallowed_tools: ${{ env.DISALLOWED_TOOLS }}
-        timeout_minutes: ${{ inputs.timeout_minutes }}
-        max_turns: ${{ inputs.max_turns }}
-        model: ${{ inputs.model || inputs.anthropic_model }}
-        mcp_config: ${{ steps.prepare.outputs.mcp_config }}
-        use_bedrock: ${{ inputs.use_bedrock }}
-        use_vertex: ${{ inputs.use_vertex }}
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        claude_env: ${{ inputs.claude_env }}
+      shell: bash
+      run: |
+        cd ${GITHUB_ACTION_PATH}
+        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/execute-cli.ts
       env:
-        # Model configuration
-        ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
+        CLI_TOOL: ${{ inputs.cli_tool }}
+        PROMPT_FILE: ${{ runner.temp }}/claude-prompts/claude-prompt.txt
+        ALLOWED_TOOLS: ${{ env.ALLOWED_TOOLS }}
+        DISALLOWED_TOOLS: ${{ env.DISALLOWED_TOOLS }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        MAX_TURNS: ${{ inputs.max_turns }}
+        MODEL: ${{ inputs.model || inputs.anthropic_model }}
+        MCP_CONFIG: ${{ steps.prepare.outputs.mcp_config }}
+        USE_BEDROCK: ${{ inputs.use_bedrock }}
+        USE_VERTEX: ${{ inputs.use_vertex }}
+        API_KEY: ${{ inputs.api_key || inputs.anthropic_api_key }}
+        AI_ENV: ${{ inputs.ai_env || inputs.claude_env }}
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
 
         # Provider configuration
@@ -170,19 +182,19 @@ runs:
         CLAUDE_BRANCH: ${{ steps.prepare.outputs.CLAUDE_BRANCH }}
         IS_PR: ${{ github.event.issue.pull_request != null || github.event_name == 'pull_request_review_comment' }}
         BASE_BRANCH: ${{ steps.prepare.outputs.BASE_BRANCH }}
-        CLAUDE_SUCCESS: ${{ steps.claude-code.outputs.conclusion == 'success' }}
-        OUTPUT_FILE: ${{ steps.claude-code.outputs.execution_file || '' }}
+        AI_SUCCESS: ${{ steps.ai-execution.outputs.conclusion == 'success' }}
+        OUTPUT_FILE: ${{ steps.ai-execution.outputs.execution_file || '' }}
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
         PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
 
-    - name: Display Claude Code Report
-      if: steps.prepare.outputs.contains_trigger == 'true' && steps.claude-code.outputs.execution_file != ''
+    - name: Display AI Execution Report
+      if: steps.prepare.outputs.contains_trigger == 'true' && steps.ai-execution.outputs.execution_file != ''
       shell: bash
       run: |
-        echo "## Claude Code Report" >> $GITHUB_STEP_SUMMARY
+        echo "## AI Execution Report" >> $GITHUB_STEP_SUMMARY
         echo '```json' >> $GITHUB_STEP_SUMMARY
-        cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
+        cat "${{ steps.ai-execution.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Revoke app token
