@@ -1,4 +1,4 @@
-name: Test Codex AI Assistant
+name: Test Augment AI Assistant
 
 on:
   issue_comment:
@@ -11,12 +11,12 @@ on:
     types: [submitted]
 
 jobs:
-  codex-test:
+  augment-test:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@codex')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@codex')) ||
-      (github.event_name == 'issues' && contains(github.event.issue.body, '@codex'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@augment')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@augment'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,17 +29,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Test Codex AI Action
+      - name: Test Augment AI Action
         uses: ./  # Use the local action for testing
         with:
-          # Use Codex CLI tool
-          cli_tool: "codex-cli"
+          # Use Augment CLI tool (falls back to OpenAI)
+          cli_tool: "augment-cli"
           
-          # OpenAI API key for Codex
+          # OpenAI API key (since augment-cli falls back to OpenAI)
           api_key: ${{ secrets.OPENAI_API_KEY }}
           
-          # Custom trigger phrase for Codex
-          trigger_phrase: "@codex"
+          # Custom trigger phrase for Augment
+          trigger_phrase: "@augment"
           
           # Optional: Specify GPT model
           model: "gpt-4"
@@ -47,13 +47,13 @@ jobs:
           # Timeout for execution
           timeout_minutes: "30"
           
-          # Custom instructions for Codex
+          # Custom instructions for Augment
           custom_instructions: |
-            You are a helpful AI assistant powered by OpenAI Codex.
-            Focus on providing clean, well-structured code solutions.
-            Always include comments in your code and explain your approach.
+            You are a helpful AI assistant using Augment's capabilities.
+            Focus on providing clear, well-documented solutions.
+            Always explain your reasoning and suggest improvements.
           
           # Optional: Environment variables
           ai_env: |
-            OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
-            NODE_ENV: development 
+            NODE_ENV: development
+            DEBUG: true 
