@@ -65,6 +65,7 @@ function getCliToolConfig(cliTool: string): CliToolConfig {
         ],
         envSetup: {
           GOOGLE_API_KEY: apiKey,
+          GEMINI_API_KEY: apiKey, // Support both environment variable names
           GOOGLE_AI_MODEL: model,
           ...(aiEnv ? JSON.parse(aiEnv) : {}),
         },

@@ -1,0 +1,60 @@
+name: Test Gemini AI Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  gemini-test:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gemini')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gemini')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@gemini'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Test Gemini AI Action
+        uses: ./  # Use the local action for testing
+        with:
+          # Use Gemini CLI tool
+          cli_tool: "gemini-cli"
+          
+          # Google API key for Gemini 
+          api_key: ${{ secrets.GEMINI_API_KEY }}
+          
+          # Custom trigger phrase for Gemini
+          trigger_phrase: "@gemini"
+          
+          # Optional: Specify Gemini model
+          model: "gemini-pro"
+          
+          # Timeout for execution
+          timeout_minutes: "30"
+          
+          # Custom instructions for Gemini
+          custom_instructions: |
+            You are a helpful AI assistant powered by Google Gemini.
+            Focus on providing clear, well-structured solutions.
+            Always explain your reasoning step by step.
+            Be concise but thorough in your explanations.
+          
+          # Optional: Environment variables
+          ai_env: |
+            NODE_ENV: development
+            DEBUG: true 
