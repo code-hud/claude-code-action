@@ -54,6 +54,9 @@ inputs:
   anthropic_api_key:
     description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
     required: false
+  augment_api_key:
+    description: "Augment API key (required for @augment triggers)"
+    required: false
   github_token:
     description: "GitHub token with repo and pull request permissions (optional if using GitHub App)"
     required: false
@@ -114,7 +117,7 @@ runs:
 
     - name: Run Claude Code
       id: claude-code
-      if: steps.prepare.outputs.contains_trigger == 'true'
+      if: steps.prepare.outputs.contains_trigger == 'true' && steps.prepare.outputs.ai_provider == 'claude'
       uses: anthropics/claude-code-base-action@f382bd1ea00f26043eb461ebabebe0d850572a71 # v0.0.24
       with:
         prompt_file: ${{ runner.temp }}/claude-prompts/claude-prompt.txt
@@ -154,6 +157,21 @@ runs:
         VERTEX_REGION_CLAUDE_3_5_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_5_SONNET }}
         VERTEX_REGION_CLAUDE_3_7_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_7_SONNET }}
 
+    - name: Run Augment CLI
+      id: augment-cli
+      if: steps.prepare.outputs.contains_trigger == 'true' && steps.prepare.outputs.ai_provider == 'augment'
+      shell: bash
+      run: |
+        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/augment.ts
+      env:
+        GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        AUGMENT_API_KEY: ${{ inputs.augment_api_key }}
+        INSTRUCTION_FILE: ${{ steps.prepare.outputs.instruction_file }}
+        CLAUDE_COMMENT_ID: ${{ steps.prepare.outputs.claude_comment_id }}
+        REPOSITORY: ${{ github.repository }}
+        ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
+
     - name: Update comment with job link
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.prepare.outputs.claude_comment_id && always()
       shell: bash
@@ -170,7 +188,7 @@ runs:
         CLAUDE_BRANCH: ${{ steps.prepare.outputs.CLAUDE_BRANCH }}
         IS_PR: ${{ github.event.issue.pull_request != null || github.event_name == 'pull_request_review_comment' }}
         BASE_BRANCH: ${{ steps.prepare.outputs.BASE_BRANCH }}
-        CLAUDE_SUCCESS: ${{ steps.claude-code.outputs.conclusion == 'success' }}
+        CLAUDE_SUCCESS: ${{ (steps.claude-code.outputs.conclusion == 'success') || (steps.augment-cli.outcome == 'success') }}
         OUTPUT_FILE: ${{ steps.claude-code.outputs.execution_file || '' }}
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}

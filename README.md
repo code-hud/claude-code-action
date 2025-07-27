@@ -78,7 +78,8 @@ jobs:
 
 | Input                 | Description                                                                                                          | Required | Default   |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
+| `anthropic_api_key`   | Anthropic API key (required for Claude, not needed for Bedrock/Vertex)                                               | No\*     | -         |
+| `augment_api_key`     | Augment API key (required for @augment triggers)                                                                     | No\*     | -         |
 | `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
 | `max_turns`           | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
 | `timeout_minutes`     | Timeout in minutes for execution                                                                                     | No       | `30`      |
@@ -191,11 +192,11 @@ For example, if your Python MCP server is at `mcp_servers/weather.py`, you would
 
 ## Examples
 
-### Ways to Tag @claude
+### Ways to Tag @claude or @augment
 
-These examples show how to interact with Claude using comments in PRs and issues. By default, Claude will be triggered anytime you mention `@claude`, but you can customize the exact trigger phrase using the `trigger_phrase` input in the workflow.
+These examples show how to interact with AI assistants using comments in PRs and issues. By default, Claude will be triggered anytime you mention `@claude`, and Augment will be triggered with `@augment`. You can customize the exact trigger phrase using the `trigger_phrase` input in the workflow.
 
-Claude will see the full PR context, including any comments.
+Both assistants will see the full PR context, including any comments.
 
 #### Ask Questions
 
@@ -205,14 +206,22 @@ Add a comment to a PR or issue:
 @claude What does this function do and how could we improve it?
 ```
 
-Claude will analyze the code and provide a detailed explanation with suggestions.
+```
+@augment What does this function do and how could we improve it?
+```
+
+The AI will analyze the code and provide a detailed explanation with suggestions.
 
 #### Request Fixes
 
-Ask Claude to implement specific changes:
+Ask the AI to implement specific changes:
 
 ```
 @claude Can you add error handling to this function?
+```
+
+```
+@augment Can you add error handling to this function?
 ```
 
 #### Code Review
@@ -223,11 +232,15 @@ Get a thorough review:
 @claude Please review this PR and suggest improvements
 ```
 
-Claude will analyze the changes and provide feedback.
+```
+@augment Please review this PR and suggest improvements
+```
+
+The AI will analyze the changes and provide feedback.
 
 #### Fix Bugs from Screenshots
 
-Upload a screenshot of a bug and ask Claude to fix it:
+Upload a screenshot of a bug and ask Claude to fix it (Claude only):
 
 ```
 @claude Here's a screenshot of a bug I'm seeing [upload screenshot]. Can you fix it?

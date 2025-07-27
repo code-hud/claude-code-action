@@ -11,15 +11,33 @@ import {
 } from "../context";
 import type { ParsedGitHubContext } from "../context";
 
-export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
+export type AIProvider = "claude" | "augment";
+
+export function detectAIProvider(text: string): AIProvider | null {
+  // Check for @augment first (more specific)
+  const augmentRegex = /(^|\s)@augment([\s.,!?;:]|$)/;
+  if (augmentRegex.test(text)) {
+    return "augment";
+  }
+  
+  // Check for @claude
+  const claudeRegex = /(^|\s)@claude([\s.,!?;:]|$)/;
+  if (claudeRegex.test(text)) {
+    return "claude";
+  }
+  
+  return null;
+}
+
+export function checkContainsTrigger(context: ParsedGitHubContext): { containsTrigger: boolean; aiProvider?: AIProvider } {
   const {
     inputs: { assigneeTrigger, triggerPhrase, directPrompt },
   } = context;
 
-  // If direct prompt is provided, always trigger
+  // If direct prompt is provided, always trigger with claude as default
   if (directPrompt) {
-    console.log(`Direct prompt provided, triggering action`);
-    return true;
+    console.log(`Direct prompt provided, triggering action with Claude`);
+    return { containsTrigger: true, aiProvider: "claude" };
   }
 
   // Check for assignee trigger
@@ -30,7 +48,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
 
     if (triggerUser && assigneeUsername === triggerUser) {
       console.log(`Issue assigned to trigger user '${triggerUser}'`);
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" }; // Default to claude for assignee triggers
     }
   }
 
@@ -38,7 +56,19 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   if (isIssuesEvent(context) && context.eventAction === "opened") {
     const issueBody = context.payload.issue.body || "";
     const issueTitle = context.payload.issue.title || "";
-    // Check for exact match with word boundaries or punctuation
+    
+    // Check for AI provider in body
+    let aiProvider = detectAIProvider(issueBody);
+    if (!aiProvider) {
+      aiProvider = detectAIProvider(issueTitle);
+    }
+    
+    if (aiProvider) {
+      console.log(`Issue contains ${aiProvider} trigger`);
+      return { containsTrigger: true, aiProvider };
+    }
+
+    // Fallback to original trigger phrase logic for backward compatibility
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,
     );
@@ -48,7 +78,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       console.log(
         `Issue body contains exact trigger phrase '${triggerPhrase}'`,
       );
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
 
     // Check in title
@@ -56,7 +86,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       console.log(
         `Issue title contains exact trigger phrase '${triggerPhrase}'`,
       );
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
   }
 
@@ -64,7 +94,19 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   if (isPullRequestEvent(context)) {
     const prBody = context.payload.pull_request.body || "";
     const prTitle = context.payload.pull_request.title || "";
-    // Check for exact match with word boundaries or punctuation
+    
+    // Check for AI provider in body
+    let aiProvider = detectAIProvider(prBody);
+    if (!aiProvider) {
+      aiProvider = detectAIProvider(prTitle);
+    }
+    
+    if (aiProvider) {
+      console.log(`Pull request contains ${aiProvider} trigger`);
+      return { containsTrigger: true, aiProvider };
+    }
+
+    // Fallback to original trigger phrase logic for backward compatibility
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,
     );
@@ -74,7 +116,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       console.log(
         `Pull request body contains exact trigger phrase '${triggerPhrase}'`,
       );
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
 
     // Check in title
@@ -82,7 +124,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       console.log(
         `Pull request title contains exact trigger phrase '${triggerPhrase}'`,
       );
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
   }
 
@@ -92,7 +134,15 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     (context.eventAction === "submitted" || context.eventAction === "edited")
   ) {
     const reviewBody = context.payload.review.body || "";
-    // Check for exact match with word boundaries or punctuation
+    
+    // Check for AI provider
+    const aiProvider = detectAIProvider(reviewBody);
+    if (aiProvider) {
+      console.log(`Pull request review contains ${aiProvider} trigger`);
+      return { containsTrigger: true, aiProvider };
+    }
+
+    // Fallback to original trigger phrase logic for backward compatibility
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,
     );
@@ -100,7 +150,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       console.log(
         `Pull request review contains exact trigger phrase '${triggerPhrase}'`,
       );
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
   }
 
@@ -112,19 +162,27 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     const commentBody = isIssueCommentEvent(context)
       ? context.payload.comment.body
       : context.payload.comment.body;
-    // Check for exact match with word boundaries or punctuation
+      
+    // Check for AI provider
+    const aiProvider = detectAIProvider(commentBody);
+    if (aiProvider) {
+      console.log(`Comment contains ${aiProvider} trigger`);
+      return { containsTrigger: true, aiProvider };
+    }
+
+    // Fallback to original trigger phrase logic for backward compatibility
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,
     );
     if (regex.test(commentBody)) {
       console.log(`Comment contains exact trigger phrase '${triggerPhrase}'`);
-      return true;
+      return { containsTrigger: true, aiProvider: "claude" };
     }
   }
 
   console.log(`No trigger was met for ${triggerPhrase}`);
 
-  return false;
+  return { containsTrigger: false };
 }
 
 export function escapeRegExp(string: string) {
@@ -132,7 +190,10 @@ export function escapeRegExp(string: string) {
 }
 
 export async function checkTriggerAction(context: ParsedGitHubContext) {
-  const containsTrigger = checkContainsTrigger(context);
-  core.setOutput("contains_trigger", containsTrigger.toString());
-  return containsTrigger;
+  const result = checkContainsTrigger(context);
+  core.setOutput("contains_trigger", result.containsTrigger.toString());
+  if (result.aiProvider) {
+    core.setOutput("ai_provider", result.aiProvider);
+  }
+  return result.containsTrigger;
 }

@@ -7,7 +7,6 @@
 
 import * as core from "@actions/core";
 import { setupGitHubToken } from "../github/token";
-import { checkTriggerAction } from "../github/validation/trigger";
 import { checkAllowedActor } from "../github/validation/actor";
 import { checkWritePermissions } from "../github/validation/permissions";
 import { createInitialComment } from "../github/operations/comments/create-initial";
@@ -18,6 +17,9 @@ import { createPrompt } from "../create-prompt";
 import { createOctokit } from "../github/api/client";
 import { fetchGitHubData } from "../github/data/fetcher";
 import { parseGitHubContext } from "../github/context";
+import { writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+import { checkContainsTrigger } from "../github/validation/trigger";
 
 async function run() {
   try {
@@ -39,13 +41,20 @@ async function run() {
       );
     }
 
-    // Step 4: Check trigger conditions
-    const containsTrigger = await checkTriggerAction(context);
+    // Step 4: Check trigger conditions and determine AI provider
+    const triggerResult = checkContainsTrigger(context);
+    const containsTrigger = triggerResult.containsTrigger;
+    const aiProvider = triggerResult.aiProvider || "claude";
+
+    core.setOutput("contains_trigger", containsTrigger.toString());
+    core.setOutput("ai_provider", aiProvider);
 
     if (!containsTrigger) {
       console.log("No trigger found, skipping remaining steps");
       return;
     }
+
+    console.log(`Detected AI provider: ${aiProvider}`);
 
     // Step 5: Check if actor is human
     await checkAllowedActor(octokit.rest, context);
@@ -75,27 +84,33 @@ async function run() {
       );
     }
 
-    // Step 10: Create prompt file
-    await createPrompt(
-      commentId,
-      branchInfo.baseBranch,
-      branchInfo.claudeBranch,
-      githubData,
-      context,
-    );
+    // Step 10: Create appropriate files based on AI provider
+    if (aiProvider === "claude") {
+      // Step 10a: Create prompt file for Claude
+      await createPrompt(
+        commentId,
+        branchInfo.baseBranch,
+        branchInfo.claudeBranch,
+        githubData,
+        context,
+      );
 
-    // Step 11: Get MCP configuration
-    const additionalMcpConfig = process.env.MCP_CONFIG || "";
-    const mcpConfig = await prepareMcpConfig({
-      githubToken,
-      owner: context.repository.owner,
-      repo: context.repository.repo,
-      branch: branchInfo.currentBranch,
-      additionalMcpConfig,
-      claudeCommentId: commentId.toString(),
-      allowedTools: context.inputs.allowedTools,
-    });
-    core.setOutput("mcp_config", mcpConfig);
+      // Step 11a: Get MCP configuration for Claude
+      const additionalMcpConfig = process.env.MCP_CONFIG || "";
+      const mcpConfig = await prepareMcpConfig({
+        githubToken,
+        owner: context.repository.owner,
+        repo: context.repository.repo,
+        branch: branchInfo.currentBranch,
+        additionalMcpConfig,
+        claudeCommentId: commentId.toString(),
+        allowedTools: context.inputs.allowedTools,
+      });
+      core.setOutput("mcp_config", mcpConfig);
+    } else if (aiProvider === "augment") {
+      // Step 10b: Create instruction file for Augment
+      await createAugmentInstructionFile(context, githubData);
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     core.setFailed(`Prepare step failed with error: ${errorMessage}`);
@@ -103,6 +118,52 @@ async function run() {
     core.setOutput("prepare_error", errorMessage);
     process.exit(1);
   }
+}
+
+async function createAugmentInstructionFile(context: any, githubData: any) {
+  // Create augment-prompts directory in temp
+  const tempDir = process.env.RUNNER_TEMP || "/tmp";
+  const augmentDir = join(tempDir, "augment-prompts");
+  
+  try {
+    mkdirSync(augmentDir, { recursive: true });
+  } catch (error) {
+    // Directory might already exist
+  }
+
+  // Extract the issue/PR content as instruction
+  let instructionContent = "";
+
+  if (context.isPR) {
+    const pr = githubData.pullRequest;
+    instructionContent = `# Pull Request: ${pr?.title || "No title"}
+
+${pr?.body || "No description"}
+
+## Changed Files:
+${githubData.changedFiles?.map((file: any) => `- ${file.filename}`).join('\n') || "No files"}
+`;
+  } else {
+    const issue = githubData.issue;
+    instructionContent = `# Issue: ${issue?.title || "No title"}
+
+${issue?.body || "No description"}
+`;
+  }
+
+  // Add comments if any
+  if (githubData.comments && githubData.comments.length > 0) {
+    instructionContent += `\n## Comments:\n`;
+    githubData.comments.forEach((comment: any) => {
+      instructionContent += `\n**${comment.user?.login || "Unknown"}:** ${comment.body}\n`;
+    });
+  }
+
+  const instructionFile = join(augmentDir, "instruction.txt");
+  writeFileSync(instructionFile, instructionContent);
+  
+  console.log(`✅ Created Augment instruction file: ${instructionFile}`);
+  core.setOutput("instruction_file", instructionFile);
 }
 
 if (import.meta.main) {
