@@ -1,0 +1,59 @@
+name: Test Augment AI Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  augment-test:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@augment')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@augment')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@augment'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Test Augment AI Action
+        uses: ./  # Use the local action for testing
+        with:
+          # Use Augment CLI tool (falls back to OpenAI)
+          cli_tool: "augment-cli"
+          
+          # OpenAI API key (since augment-cli falls back to OpenAI)
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          
+          # Custom trigger phrase for Augment
+          trigger_phrase: "@augment"
+          
+          # Optional: Specify GPT model
+          model: "gpt-4"
+          
+          # Timeout for execution
+          timeout_minutes: "30"
+          
+          # Custom instructions for Augment
+          custom_instructions: |
+            You are a helpful AI assistant using Augment's capabilities.
+            Focus on providing clear, well-documented solutions.
+            Always explain your reasoning and suggest improvements.
+          
+          # Optional: Environment variables
+          ai_env: |
+            NODE_ENV: development
+            DEBUG: true 
