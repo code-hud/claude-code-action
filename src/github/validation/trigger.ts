@@ -14,8 +14,8 @@ import type { ParsedGitHubContext } from "../context";
 export type AIProvider = "claude" | "augment";
 
 export function detectAIProvider(text: string): AIProvider | null {
-  // Check for @augment first (more specific)
-  const augmentRegex = /(^|\s)@augment([\s.,!?;:]|$)/;
+  // Check for @augment, @hud-augment first (more specific)
+  const augmentRegex = /(^|\s)@(augment|hud-augment)([\s.,!?;:]|$)/;
   if (augmentRegex.test(text)) {
     return "augment";
   }
