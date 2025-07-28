@@ -29,6 +29,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Run Augment Assistant
         uses: code-hud/claude-code-action@feature/augment-cli-support
         with:
