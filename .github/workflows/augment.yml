@@ -1,4 +1,4 @@
-name: Hud-Augment 
+name: Hud-Augment
 
 on:
   issue_comment:
@@ -17,9 +17,9 @@ jobs:
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@hud-augment')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@hud-augment')) ||
       (github.event_name == 'issues' && contains(github.event.issue.body, '@hud-augment'))
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
       id-token: write
@@ -34,3 +34,5 @@ jobs:
         with:
           augment_api_key: ${{ secrets.AUGMENT_API_KEY }}
           timeout_minutes: "60"
+          allowed_bot_names: "hud-bot[bot]"
+          github_token: ${{ github.actor == 'hud-bot[bot]' && secrets.GITHUB_TOKEN || '' }}
