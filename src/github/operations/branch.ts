@@ -62,8 +62,14 @@ export async function setupBranch(
       // For open PRs, we need to get the base branch of the PR
       const baseBranch = prData.baseRefName;
 
+      // Set outputs for GitHub Actions - include the PR branch as CLAUDE_BRANCH
+      // so that branch links and PR creation links work properly
+      core.setOutput("CLAUDE_BRANCH", branchName);
+      core.setOutput("BASE_BRANCH", baseBranch);
+
       return {
         baseBranch,
+        claudeBranch: branchName,
         currentBranch: branchName,
       };
     }

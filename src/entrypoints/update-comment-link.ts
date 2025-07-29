@@ -98,47 +98,52 @@ async function run() {
 
     // Check if we need to add PR URL when we have a new branch
     let prLink = "";
-    // If claudeBranch is set, it means we created a new branch (for issues or closed/merged PRs)
+    // If claudeBranch is set, it means we have a branch to work with
     if (claudeBranch && !shouldDeleteBranch) {
-      // Check if comment already contains a PR URL
-      const serverUrlPattern = serverUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const prUrlPattern = new RegExp(
-        `${serverUrlPattern}\\/.+\\/compare\\/${baseBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.\\.\\.`,
-      );
-      const containsPRUrl = currentBody.match(prUrlPattern);
+      // Check if we're working on an open PR (don't offer PR creation for existing PRs)
+      const isOpenPR = context.isPR && context.payload.pull_request?.state === 'open';
+      
+      if (!isOpenPR) {
+        // Check if comment already contains a PR URL
+        const serverUrlPattern = serverUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const prUrlPattern = new RegExp(
+          `${serverUrlPattern}\\/.+\\/compare\\/${baseBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.\\.\\.`,
+        );
+        const containsPRUrl = currentBody.match(prUrlPattern);
 
-      if (!containsPRUrl) {
-        // Check if there are changes to the branch compared to the default branch
-        try {
-          const { data: comparison } =
-            await octokit.rest.repos.compareCommitsWithBasehead({
-              owner,
-              repo,
-              basehead: `${baseBranch}...${claudeBranch}`,
-            });
+        if (!containsPRUrl) {
+          // Check if there are changes to the branch compared to the default branch
+          try {
+            const { data: comparison } =
+              await octokit.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `${baseBranch}...${claudeBranch}`,
+              });
 
-          // If there are changes (commits or file changes), add the PR URL
-          if (
-            comparison.total_commits > 0 ||
-            (comparison.files && comparison.files.length > 0)
-          ) {
-            const entityType = context.isPR ? "PR" : "Issue";
-            const title = `${entityType} #${context.entityNumber}: Changes from Hud`;
-            const body = `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
-            
-            // Build URL with proper encoding using URLSearchParams
-            const params = new URLSearchParams({
-              quick_pull: '1',
-              title: title,
-              body: body
-            });
-            
-            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?${params.toString()}`;
-            prLink = `\n[Create a PR](${prUrl})`;
+            // If there are changes (commits or file changes), add the PR URL
+            if (
+              comparison.total_commits > 0 ||
+              (comparison.files && comparison.files.length > 0)
+            ) {
+              const entityType = context.isPR ? "PR" : "Issue";
+              const title = `${entityType} #${context.entityNumber}: Changes from Hud`;
+              const body = `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
+              
+              // Build URL with proper encoding using URLSearchParams
+              const params = new URLSearchParams({
+                quick_pull: '1',
+                title: title,
+                body: body
+              });
+              
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?${params.toString()}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
+          } catch (error) {
+            console.error("Error checking for changes in branch:", error);
+            // Don't fail the entire update if we can't check for changes
           }
-        } catch (error) {
-          console.error("Error checking for changes in branch:", error);
-          // Don't fail the entire update if we can't check for changes
         }
       }
     }
