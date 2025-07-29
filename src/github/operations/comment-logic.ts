@@ -81,7 +81,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
 
   // Extract content from the original comment body
   // First, remove the "Hud is working…" or "Hud is working..." message
-  const workingPattern = /(?:Claude Code|Hud) is working[…\.]{1,3}(?:\s*<[^>]*>)?/i;
+  const workingPattern = /(?:Claude Code|Hud|Hud \+ Augment) is working[…\.]{1,3}(?:\s*<[^>]*>)?/i;
   let bodyContent = originalBody.replace(workingPattern, "").trim();
 
   // Check if there's a PR link in the content
@@ -187,6 +187,23 @@ export function updateCommentBody(input: CommentUpdateInput): string {
   }
 
   newBody += `\n\n---\n`;
+
+  // Check if there's Augment output to include
+  const augmentOutputFile = process.env.AUGMENT_OUTPUT_FILE;
+  if (augmentOutputFile) {
+    try {
+      const fs = require('fs');
+      const augmentContent = fs.readFileSync(augmentOutputFile, "utf8");
+      if (augmentContent.trim()) {
+        newBody += augmentContent.trim();
+        console.log("✅ Added Augment response to comment");
+        return newBody.trim();
+      }
+    } catch (error) {
+      console.log("⚠️ Could not read Augment output file:", error);
+      // Continue with normal processing if can't read Augment output
+    }
+  }
 
   // Clean up the body content
   // Remove any existing View job run, branch links from the bottom

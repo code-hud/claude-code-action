@@ -165,17 +165,26 @@ async function run() {
     
     finalComment += `---\n*Powered by [Hud + Augment](https://www.hud.io)*`;
 
-    // Instead of directly setting the final comment, just update with the response
-    // This allows update-comment-link.ts to add the proper header with job/branch/PR links
-    await updateProgressComment(
-      githubToken,
-      repository,
-      claudeCommentId,
-      "",
-      finalComment
-    );
-
-    console.log("🎉 Successfully posted Hud response to GitHub");
+    // Save Augment's output to a temporary file for update-comment-link.ts to process
+    const outputDir = `${process.env.RUNNER_TEMP || '/tmp'}/augment-output`;
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+      fs.mkdirSync(outputDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist
+    }
+    
+    const outputFile = path.join(outputDir, 'augment-response.md');
+    fs.writeFileSync(outputFile, finalComment);
+    
+    console.log(`📝 Saved Augment response to: ${outputFile}`);
+    
+    // Set environment variable for update-comment-link.ts to find the output
+    process.env.AUGMENT_OUTPUT_FILE = outputFile;
+    
+    console.log("🎉 Successfully completed Hud analysis - waiting for comment formatting");
 
   } catch (error) {
     console.error("💥 Fatal error in Hud entrypoint:", error);
