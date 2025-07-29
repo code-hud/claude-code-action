@@ -131,31 +131,40 @@ async function createAugmentInstructionFile(context: any, githubData: any) {
     // Directory might already exist
   }
 
-  // Extract the issue/PR content as instruction
+  // Extract the issue/PR content as instruction using the same structure as Claude
+  const { contextData, comments } = githubData;
   let instructionContent = "";
 
   if (context.isPR) {
-    const pr = githubData.pullRequest;
-    instructionContent = `# Pull Request: ${pr?.title || "No title"}
+    // For Pull Requests
+    const title = contextData?.title || "No title";
+    const body = contextData?.body || "No description";
+    
+    instructionContent = `# Pull Request: ${title}
 
-${pr?.body || "No description"}
+${body}
 
 ## Changed Files:
-${githubData.changedFiles?.map((file: any) => `- ${file.filename}`).join('\n') || "No files"}
+${githubData.changedFiles?.map((file: any) => `- ${file.path || file.filename}`).join('\n') || "No files changed"}
 `;
   } else {
-    const issue = githubData.issue;
-    instructionContent = `# Issue: ${issue?.title || "No title"}
+    // For Issues
+    const title = contextData?.title || "No title";
+    const body = contextData?.body || "No description";
+    
+    instructionContent = `# Issue: ${title}
 
-${issue?.body || "No description"}
+${body}
 `;
   }
 
   // Add comments if any
-  if (githubData.comments && githubData.comments.length > 0) {
+  if (comments && comments.length > 0) {
     instructionContent += `\n## Comments:\n`;
-    githubData.comments.forEach((comment: any) => {
-      instructionContent += `\n**${comment.user?.login || "Unknown"}:** ${comment.body}\n`;
+    comments.forEach((comment: any) => {
+      const author = comment.author?.login || comment.user?.login || "Unknown";
+      const body = comment.body || comment.bodyText || "";
+      instructionContent += `\n**${author}:** ${body}\n`;
     });
   }
 
@@ -163,6 +172,7 @@ ${issue?.body || "No description"}
   writeFileSync(instructionFile, instructionContent);
   
   console.log(`✅ Created Augment instruction file: ${instructionFile}`);
+  console.log(`📝 Instruction content preview:\n${instructionContent.substring(0, 200)}...`);
   core.setOutput("instruction_file", instructionFile);
 }
 
