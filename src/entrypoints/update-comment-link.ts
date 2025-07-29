@@ -123,13 +123,17 @@ async function run() {
             (comparison.files && comparison.files.length > 0)
           ) {
             const entityType = context.isPR ? "PR" : "Issue";
-            const prTitle = encodeURIComponent(
-              `${entityType} #${context.entityNumber}: Changes from Claude`,
-            );
-            const prBody = encodeURIComponent(
-              `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
-            );
-            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+            const title = `${entityType} #${context.entityNumber}: Changes from Hud`;
+            const body = `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
+            
+            // Build URL with proper encoding using URLSearchParams
+            const params = new URLSearchParams({
+              quick_pull: '1',
+              title: title,
+              body: body
+            });
+            
+            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?${params.toString()}`;
             prLink = `\n[Create a PR](${prUrl})`;
           }
         } catch (error) {
