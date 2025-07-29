@@ -1,7 +1,8 @@
 import { GITHUB_SERVER_URL } from "../../api/config";
 
+// Hud-branded loading spinner with cyan colors matching the logo
 export const SPINNER_HTML =
-  '<img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />';
+  '<span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #0df; border-top: 2px solid transparent; border-radius: 50%; animation: hud-spin 1s linear infinite; vertical-align: middle; margin-left: 4px;"></span><style>@keyframes hud-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
 
 export function createJobRunLink(
   owner: string,
@@ -25,7 +26,7 @@ export function createCommentBody(
   jobRunLink: string,
   branchLink: string = "",
 ): string {
-  return `Claude Code is working… ${SPINNER_HTML}
+  return `Hud is working… ${SPINNER_HTML}
 
 I'll analyze this and get back to you.
 

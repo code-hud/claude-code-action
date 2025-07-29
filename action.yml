@@ -1,8 +1,8 @@
-name: "Claude Code Action Official"
-description: "General-purpose Claude agent for GitHub PRs and issues. Can answer questions and implement code changes."
+name: "Hud AI Code Action"
+description: "AI-powered assistant for GitHub PRs and issues. Supports both Claude and Augment agents for code analysis and implementation."
 branding:
-  icon: "at-sign"
-  color: "orange"
+  icon: "cpu"
+  color: "blue"
 
 inputs:
   trigger_phrase:
@@ -10,7 +10,7 @@ inputs:
     required: false
     default: "@claude"
   assignee_trigger:
-    description: "The assignee username that triggers the action (e.g. @claude)"
+    description: "The assignee username that triggers the action (e.g. @hud)"
     required: false
   allowed_bot_names:
     description: "Comma-separated list of bot names that are allowed to trigger this action (in addition to human users)"
@@ -20,7 +20,7 @@ inputs:
     description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
     required: false
 
-  # Claude Code configuration
+  # AI Model configuration
   model:
     description: "Model to use (provider-specific format required for Bedrock/Vertex)"
     required: false
@@ -28,25 +28,25 @@ inputs:
     description: "DEPRECATED: Use 'model' instead. Model to use (provider-specific format required for Bedrock/Vertex)"
     required: false
   allowed_tools:
-    description: "Additional tools for Claude to use (the base GitHub tools will always be included)"
+    description: "Additional tools for the AI to use (the base GitHub tools will always be included)"
     required: false
     default: ""
   disallowed_tools:
-    description: "Tools that Claude should never use"
+    description: "Tools that the AI should never use"
     required: false
     default: ""
   custom_instructions:
-    description: "Additional custom instructions to include in the prompt for Claude"
+    description: "Additional custom instructions to include in the prompt for the AI"
     required: false
     default: ""
   direct_prompt:
-    description: "Direct instruction for Claude (bypasses normal trigger detection)"
+    description: "Direct instruction for the AI (bypasses normal trigger detection)"
     required: false
     default: ""
   mcp_config:
     description: "Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers"
   claude_env:
-    description: "Custom environment variables to pass to Claude Code execution (YAML format)"
+    description: "Custom environment variables to pass to AI execution (YAML format)"
     required: false
     default: ""
 
