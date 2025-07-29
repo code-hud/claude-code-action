@@ -21,14 +21,27 @@ export async function checkAndDeleteEmptyBranch(
           basehead: `${baseBranch}...${claudeBranch}`,
         });
 
-      // If there are no commits, mark branch for deletion
+      // If there are no commits, check if this is an Augment analysis run
       if (comparison.total_commits === 0) {
-        console.log(
-          `Branch ${claudeBranch} has no commits from Claude, will delete it`,
-        );
-        shouldDeleteBranch = true;
+        // Check if AUGMENT_API_KEY is set (indicates Augment run)
+        const isAugmentRun = !!process.env.AUGMENT_API_KEY;
+        
+        if (isAugmentRun) {
+          // For Augment runs, show branch link even without commits (analysis branches)
+          console.log(
+            `Branch ${claudeBranch} has no commits but showing link for Augment analysis`,
+          );
+          const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+          branchLink = `\n[View branch](${branchUrl})`;
+        } else {
+          // For Claude runs, delete empty branches as before
+          console.log(
+            `Branch ${claudeBranch} has no commits from Claude, will delete it`,
+          );
+          shouldDeleteBranch = true;
+        }
       } else {
-        // Only add branch link if there are commits
+        // Branch has commits, always add branch link
         const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
         branchLink = `\n[View branch](${branchUrl})`;
       }

@@ -121,14 +121,26 @@ async function run() {
                 basehead: `${baseBranch}...${claudeBranch}`,
               });
 
-            // If there are changes (commits or file changes), add the PR URL
-            if (
-              comparison.total_commits > 0 ||
-              (comparison.files && comparison.files.length > 0)
-            ) {
+            // Check if this is an Augment run (analysis) or has actual commits
+            const isAugmentRun = !!process.env.AUGMENT_API_KEY;
+            const hasChanges = comparison.total_commits > 0 || 
+                              (comparison.files && comparison.files.length > 0);
+
+            // Add PR URL if there are changes OR if this is an Augment analysis
+            if (hasChanges || isAugmentRun) {
               const entityType = context.isPR ? "PR" : "Issue";
-              const title = `${entityType} #${context.entityNumber}: Changes from Hud`;
-              const body = `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
+              let title: string;
+              let body: string;
+              
+              if (isAugmentRun && !hasChanges) {
+                // Augment analysis without commits
+                title = `${entityType} #${context.entityNumber}: Implement Hud analysis recommendations`;
+                body = `This PR implements the recommendations from Hud analysis of ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
+              } else {
+                // Regular changes (Claude or Augment with commits)
+                title = `${entityType} #${context.entityNumber}: Changes from Hud`;
+                body = `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Hud + Augment](https://www.hud.io)`;
+              }
               
               // Build URL with proper encoding using URLSearchParams
               const params = new URLSearchParams({

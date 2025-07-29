@@ -137,7 +137,7 @@ async function run() {
     }
 
     // Prepare final comment with Augment's response
-    let finalComment = "✅ **Hud completed your request**\n\n";
+    let finalComment = "";
     
     if (triggerUsername) {
       finalComment += `@${triggerUsername} `;
@@ -148,10 +148,9 @@ async function run() {
       // Parse and structure the Augment response for better readability
       let response = augmentOutput.trim();
       
-      // Clean up the response formatting
+      // Clean up the response formatting - remove redundant headers but preserve structure
       response = response
         .replace(/\*\*Augment's Response:\*\*/g, '') // Remove any redundant headers
-        .replace(/^#+\s*/gm, '## ') // Normalize headers to h2
         .trim();
       
       finalComment += response + "\n\n";
@@ -166,7 +165,8 @@ async function run() {
     
     finalComment += `---\n*Powered by [Hud + Augment](https://www.hud.io)*`;
 
-    // Update the GitHub comment with final result
+    // Instead of directly setting the final comment, just update with the response
+    // This allows update-comment-link.ts to add the proper header with job/branch/PR links
     await updateProgressComment(
       githubToken,
       repository,
