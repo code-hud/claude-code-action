@@ -46,7 +46,7 @@ async function run() {
       githubToken,
       repository,
       claudeCommentId,
-      "🤖 Augment is working on your request...",
+      "🤖 Hud + Augment is working on your request...",
       ""
     );
 
@@ -66,32 +66,32 @@ async function run() {
         githubToken,
         repository,
         claudeCommentId,
-        "❌ **Error**: Failed to check Node.js version. Augment requires Node.js 22 or newer.",
+        "❌ **Error**: Failed to check Node.js version. Hud requires Node.js 22 or newer.",
         `Error: ${error instanceof Error ? error.message : String(error)}`
       );
       process.exit(1);
     }
 
-    // Setup Augment session file
-    console.log("🔧 Setting up Augment session...");
+    // Setup Hud session file
+    console.log("🔧 Setting up Hud session...");
     try {
-      await setupAugmentSession(augmentApiKey);
+      await setupHudSession(augmentApiKey);
     } catch (error) {
-      console.error("❌ Failed to setup Augment session:", error);
+      console.error("❌ Failed to setup Hud session:", error);
       await updateProgressComment(
         githubToken,
         repository,
         claudeCommentId,
-        "❌ **Error**: Failed to setup Augment session.",
+        "❌ **Error**: Failed to setup Hud session.",
         `Error: ${error instanceof Error ? error.message : String(error)}`
       );
       process.exit(1);
     }
 
-    // Execute Augment CLI (without API key in command since it's now in session file)
+    // Execute Hud CLI (without API key in command since it's now in session file)
     const augmentCommand = `npx https://augment-assets.com/augment-latest.tgz --ni --github-api-token "${githubToken}" --instruction-file "${instructionFile}"`;
     
-    console.log("🔧 Executing Augment CLI...");
+    console.log("🔧 Executing Hud CLI...");
     console.log(`Command: ${augmentCommand.replace(githubToken, "[REDACTED]")}`);
 
     let augmentOutput = "";
@@ -106,16 +106,16 @@ async function run() {
       augmentOutput = stdout;
       augmentError = stderr;
       
-      console.log("✅ Augment CLI completed successfully");
+      console.log("✅ Hud CLI completed successfully");
       if (augmentOutput) {
-        console.log("📝 Augment output:", augmentOutput.substring(0, 500) + (augmentOutput.length > 500 ? "..." : ""));
+        console.log("📝 Hud output:", augmentOutput.substring(0, 500) + (augmentOutput.length > 500 ? "..." : ""));
       }
       if (augmentError) {
         console.log("⚠️ Augment stderr:", augmentError.substring(0, 500) + (augmentError.length > 500 ? "..." : ""));
       }
 
     } catch (error: any) {
-      console.error("❌ Augment CLI failed:", error);
+      console.error("❌ Hud CLI failed:", error);
       
       // Capture partial output if available
       if (error.stdout) {
@@ -130,39 +130,38 @@ async function run() {
         githubToken,
         repository,
         claudeCommentId,
-        "❌ **Augment CLI Error**",
+        "❌ **Hud CLI Error**",
         `Error: ${errorMessage}\n\nStderr: ${augmentError}\n\nPartial output: ${augmentOutput}`
       );
       process.exit(1);
     }
 
     // Prepare final comment with Augment's response
-    let finalComment = "✅ **Augment completed your request**\n\n";
+    let finalComment = "✅ **Hud completed your request**\n\n";
     
     if (triggerUsername) {
       finalComment += `@${triggerUsername} `;
     }
     
-    // Add the instruction file content for context
-    try {
-      const instructionContent = readFileSync(instructionFile, 'utf-8');
-      if (instructionContent.trim()) {
-        finalComment += `**Original Request:**\n\`\`\`\n${instructionContent.trim()}\n\`\`\`\n\n`;
-      }
-    } catch (error) {
-      console.warn("Could not read instruction file for context:", error);
-    }
-    
-    // Add Augment's response
+    // Add Augment's response directly as markdown (no code blocks)
     if (augmentOutput.trim()) {
-      finalComment += `**Augment's Response:**\n${augmentOutput.trim()}\n\n`;
+      // Parse and structure the Augment response for better readability
+      let response = augmentOutput.trim();
+      
+      // Clean up the response formatting
+      response = response
+        .replace(/\*\*Augment's Response:\*\*/g, '') // Remove any redundant headers
+        .replace(/^#+\s*/gm, '## ') // Normalize headers to h2
+        .trim();
+      
+      finalComment += response + "\n\n";
     } else {
-      finalComment += "Augment completed the task but didn't provide detailed output.\n\n";
+      finalComment += "Hud completed the task but didn't provide detailed output.\n\n";
     }
     
-    // Add any stderr as a note if it exists
+    // Add any stderr as a note if it exists (but make it less prominent)
     if (augmentError.trim()) {
-      finalComment += `<details>\n<summary>Additional Info</summary>\n\n\`\`\`\n${augmentError.trim()}\n\`\`\`\n</details>\n\n`;
+      finalComment += `<details>\n<summary>Additional Technical Info</summary>\n\n\`\`\`\n${augmentError.trim()}\n\`\`\`\n</details>\n\n`;
     }
     
     finalComment += `---\n*Powered by [Hud + Augment](https://www.hud.io)*`;
@@ -176,10 +175,10 @@ async function run() {
       finalComment
     );
 
-    console.log("🎉 Successfully posted Augment response to GitHub");
+    console.log("🎉 Successfully posted Hud response to GitHub");
 
   } catch (error) {
-    console.error("💥 Fatal error in Augment entrypoint:", error);
+    console.error("💥 Fatal error in Hud entrypoint:", error);
     
     // Try to update comment with error if we have the necessary info
     const githubToken = process.env.GITHUB_TOKEN;
@@ -204,7 +203,7 @@ async function run() {
   }
 }
 
-async function setupAugmentSession(augmentApiKey: string) {
+async function setupHudSession(augmentApiKey: string) {
   const homeDir = homedir();
   const augmentDir = join(homeDir, ".augment");
   const sessionFile = join(augmentDir, "session.json");
@@ -224,7 +223,7 @@ async function setupAugmentSession(augmentApiKey: string) {
   };
 
   writeFileSync(sessionFile, JSON.stringify(sessionData, null, 2));
-  console.log(`✅ Created Augment session file: ${sessionFile}`);
+  console.log(`✅ Created Hud session file: ${sessionFile}`);
 }
 
 async function updateProgressComment(
